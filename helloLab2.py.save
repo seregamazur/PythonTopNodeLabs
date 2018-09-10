@@ -1,0 +1,10 @@
+#! /usr/bin/env python3
+import sys
+# -*- coding: utf-8 -*-
+print("Input your name")
+name = input()
+print("Input your surname")
+surname = input()
+print("Input your patronym")
+patronym = input()
+print("Hello,",name,surname,patronym )

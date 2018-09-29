@@ -7,8 +7,8 @@ def pairs(a, b, c):
 
 
 def fit():
-    for l1, l2 in a:
-        if l1 <= h and l2 <= w:
+    for i, j in a:
+        if float(i) <= float(h) and float(j) <= float(w):
             return True
     return False
 

@@ -1,63 +1,48 @@
+#!/usr/bin/env python3
 
-import requests
 import bs4
+import requests
 import csv
+import re
+
+url = "https://price.ua/catc839t14/page{}.html?price[min]=10000&price[max]=20000"
 
 
-# link to scrap: https://price.ua/catc839t14.html?price[min]=10000&price[max]=20000
+def string_formate(value: str) -> str:
+    return value.replace("\'", "").replace("\"", "").replace("\n", " ")
 
 
-def write_page_to_html(content):
-    with open('index.html', 'w') as file:
-        file.write(content)
-
-
-def get_laptops_list(response) -> list:
+def write_products(response, writer) -> None:
     soup = bs4.BeautifulSoup(response.content, "html.parser")
-    return soup.find_all(class_='product-block')
+    laptop = soup.find_all(class_="product-block")
+
+    for notebook in laptop:
+        name = laptop.find(class_="model-name").text
+        price = laptop.find(class_="price").text
+        all_desc = laptop.find_all(class_='short-descr-line')
+        desc = '\n'.join([desc.text.strip() for desc in all_desc])
+        link = laptop.find(class_='btn')['href']
+        if link[0] == '/':
+            link = "https://price.ua" + link
+        photo_link = notebook.find(class_='photo-wrap').find('img')['src']
+        photo_link = f"https:{photo_link}"
+        writer.writerow([string_formate(name),
+                         string_formate(price),
+                         string_formate(desc),
+                         string_formate(link),
+                         string_formate(photo_link)])
 
 
-def get_laptop_name(laptop) -> str:
-    return laptop.find(class_='model-name').text
+k = 1
 
-
-def get_laptop_price(laptop) -> str:
-    return laptop.find(class_='price').text
-
-
-def get_laptop_short_desc(laptop) -> str:
-    all_desc = laptop.find_all(class_='short-descr-line')
-    return '\n'.join([desc.text.strip() for desc in all_desc])
-
-
-def get_laptop_link(laptop) -> str:
-    href = laptop.find(class_='btn')['href']
-    if href[0] == '/':
-        href = "https://price.ua" + href
-    return href
-
-
-def get_laptop_photo_link(laptop) -> str:
-    return f"https:{laptop.find(class_='photo-wrap').find('img')['src']}"
-
-
-def main():
-    url = "https://price.ua/catc839t14/page{}.html?price[min]=10000&price[max]=20000"
-    with open("laptops.csv", 'w') as file:
-        laptops_writer = csv.writer(file)
-        laptops_writer.writerow(['name', 'price', 'description', 'link', 'photo link'])
-        for i in range(1, 60):
-            content = get_laptops_list(requests.get(url=url.format(i)))
-            for laptop in content:
-                laptops_writer.writerow([get_laptop_name(laptop),
-                                         get_laptop_price(laptop),
-                                         get_laptop_short_desc(laptop),
-                                         get_laptop_link(laptop),
-                                         get_laptop_photo_link(laptop)])
-    # TODO: make loop util pages ends
-    # print(content)
-    # print(get_laptop_photo_link(content))
-
-
-if __name__ == '__main__':
-    main()
+with open("laptops.csv", 'w', encoding='utf-8') as file:
+    csv_writer = csv.writer(file)
+    while True:
+        r = requests.get(url=url.format(i))
+        page = int(re.search(r'page\d+', r.url).group(0).replace('page', '')) \
+            if k != 1 else 1
+        if k != page:
+            break
+        else:
+            write_products(r, csv_writer)
+            k += 1
